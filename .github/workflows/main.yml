@@ -14,7 +14,7 @@ jobs:
         run: |
           VERSION=$(curl -s https://www.kernel.org/releases.json | jq -r '.latest_stable.version')
           URL=$(curl -s https://www.kernel.org/releases.json | jq --arg VERSION $VERSION -r '.releases[] | select(.version == $VERSION) | .source')
-          previous_kernel=$(cat previous_kernel.txt)
+          previous_kernel=$(cat previous_version.txt)
           if [ "$VERSION" != "$previous_kernel" ]; then
             echo "::set-output name=version::$VERSION"
             echo "::set-output name=url::$URL"
