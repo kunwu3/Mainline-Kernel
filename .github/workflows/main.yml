@@ -14,16 +14,24 @@ jobs:
         run: |
           VERSION=$(curl -s https://www.kernel.org/releases.json | jq -r '.latest_stable.version')
           URL=$(curl -s https://www.kernel.org/releases.json | jq --arg VERSION $VERSION -r '.releases[] | select(.version == $VERSION) | .source')
-          echo "::set-output name=version::$VERSION"
-          echo "::set-output name=url::$URL"
+          previous_kernel=$(cat previous_kernel.txt)
+          if [ "$VERSION" != "$previous_kernel" ]; then
+            echo "::set-output name=version::$VERSION"
+            echo "::set-output name=url::$URL"
+            echo "NEW_KERNEL=true" >> $GITHUB_ENV
+          else
+            echo "No new kernel found"
+            echo "NEW_KERNEL=false" >> $GITHUB_ENV
+          fi
+          
       - name: Download and Compile Kernel
+        if: ${{ env.NEW_KERNEL == 'true' }}
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
           URL=${{ steps.get_version.outputs.url }}
           wget $URL
           tar -xf linux-$VERSION.tar.xz
           cd linux-$VERSION
-          cp ../previous_version.txt .
           make defconfig
           make -j$(nproc)
           make deb-pkg
@@ -42,5 +50,5 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           git add previous_version.txt
-          git commit -m "Update previous version to $VERSION" || echo "No changes to commit"
+          git commit -m "Update kernel version to $VERSION" || echo "No changes to commit"
           git push
