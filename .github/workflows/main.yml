@@ -3,21 +3,24 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+  
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        
       - name: Get Latest Kernel Version
-        id: get_version
         run: |
           VERSION=$(curl -s https://www.kernel.org/releases.json | jq -r '.latest_stable.version')
           URL=$(curl -s https://www.kernel.org/releases.json | jq --arg VERSION $VERSION -r '.releases[] | select(.version == $VERSION) | .source')
-          previous_kernel=$(cat previous_version.txt)
+          previous_kernel=$(cat previous_kernel.txt)
           if [ "$VERSION" != "$previous_kernel" ]; then
             echo "::set-output name=version::$VERSION"
             echo "::set-output name=url::$URL"
+            echo "VERSION=$VERSION" >> $GITHUB_ENV
+            echo "URL=$URL" >> $GITHUB_ENV
             echo "NEW_KERNEL=true" >> $GITHUB_ENV
           else
             echo "No new kernel found"
@@ -27,9 +30,8 @@ jobs:
       - name: Download and Compile Kernel
         if: ${{ env.NEW_KERNEL == 'true' }}
         run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          URL=${{ steps.get_version.outputs.url }}
-          sudo apt install wget build-essential bison flex libncurses-dev libssl-dev libelf-dev
+          VERSION=${{ env.VERSION }}
+          URL=${{ env.URL }}
           wget -q $URL
           tar -xf linux-$VERSION.tar.xz
           cd linux-$VERSION
@@ -37,16 +39,16 @@ jobs:
           make -j$(nproc)
           make deb-pkg
           cd ..
+          
       - name: Upload to Release
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./linux-*.deb
-          asset_name: linux-$VERSION.deb
-          asset_content_type: application/x-deb
+          tag_name: ${{ env.VERSION }}
+          files: ./linux-*.deb
+          
       - name: Update Previous Version
         run: |
-          VERSION=${{ steps.get_version.outputs.version }}
+          VERSION=${{ env.VERSION }}
           echo $VERSION > previous_version.txt
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
