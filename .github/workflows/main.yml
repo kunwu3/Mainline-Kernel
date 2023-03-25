@@ -1,4 +1,4 @@
-name: Kernel Build and Release
+name: Kernel Convert and Release
 on:
   schedule:
     - cron: '0 0 * * *'
@@ -14,35 +14,34 @@ jobs:
       - name: Get Latest Kernel Version
         run: |
           VERSION=$(curl -s https://www.kernel.org/releases.json | jq -r '.latest_stable.version')
-          URL=$(curl -s https://www.kernel.org/releases.json | jq --arg VERSION $VERSION -r '.releases[] | select(.version == $VERSION) | .source')
           previous_version=$(cat previous_version.txt)
           if [ "$VERSION" != "$previous_version" ]; then
             echo "VERSION=$VERSION" >> $GITHUB_ENV
-            echo "URL=$URL" >> $GITHUB_ENV
             echo "NEW_KERNEL=true" >> $GITHUB_ENV
           else
             echo "NEW_KERNEL=false" >> $GITHUB_ENV
           fi
           
-      - name: Download and Compile Kernel
+      - name: Download and convert Kernel
         if: ${{ env.NEW_KERNEL == 'true' }}
         run: |
           VERSION=${{ env.VERSION }}
-          URL=${{ env.URL }}
-          sudo apt install wget build-essential bison flex libncurses-dev libssl-dev libelf-dev
-          wget -q $URL
-          tar -xf linux-$VERSION.tar.xz
-          cd linux-$VERSION
-          make defconfig
-          make -j$(nproc)
-          make deb-pkg
-          cd ..
+          url="https://kernel.ubuntu.com/~kernel-ppa/mainline/v$VERSION/amd64/"
+          files=$(curl -s $url | grep -oP 'href="\K[^"]*_amd64\.deb')
+          for file in $files; do
+            wget -q "$url$file"
+            folder=$(echo "$file" | cut -d'-' -f2)
+            mkdir "$folder"
+            dpkg-deb -R $file $folder
+            rm -f $file
+            dpkg-deb --root-owner-group -Zgzip -b $folder $file
+          done
           
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
-          files: ./linux-*.deb
+          files: ./*.deb
           
       - name: Update Previous Version
         run: |
