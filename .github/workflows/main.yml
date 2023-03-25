@@ -41,7 +41,7 @@ jobs:
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.TRIGGER }}
           file: ${{ env.WKDIR }}/*.deb
           tag: ${{ env.VERSION }}
           overwrite: true
