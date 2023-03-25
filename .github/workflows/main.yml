@@ -27,7 +27,7 @@ jobs:
         run: |
           VERSION=${{ env.VERSION }}
           url="https://kernel.ubuntu.com/~kernel-ppa/mainline/v$VERSION/amd64/"
-          files=$(curl -s $url | grep -oP 'href="\K[^"]*_amd64\.deb')
+          files=$(curl -s $url | grep -oP 'href="\K[^"]*\.deb')
           for file in $files; do
             wget -q "$url$file"
             folder=$(echo "$file" | cut -d'-' -f2)
@@ -36,12 +36,13 @@ jobs:
             rm -f $file
             dpkg-deb --root-owner-group -Zgzip -b $folder $file
           done
+          echo "WKDIR=$(pwd)" >> $GITHUB_ENV
           
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
-          files: linux*.deb
+          files: ${{ env.WKDIR }}/*.deb
           
       - name: Update Previous Version
         run: |
