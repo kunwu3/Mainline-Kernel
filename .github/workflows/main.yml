@@ -30,8 +30,8 @@ jobs:
           files=$(curl -s $url | grep -oP 'href="\K[^"]*\.deb')
           for file in $files; do
             wget -q "$url$file"
-            folder=$(echo "$file" | cut -d'-' -f2)
-            mkdir "$folder"
+            folder=${file%.deb}
+            mkdir -p "$folder"
             dpkg-deb -R $file $folder
             rm -f $file
             dpkg-deb --root-owner-group -Zgzip -b $folder $file
@@ -42,7 +42,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.VERSION }}
-          files: ${{ env.WKDIR }}/*.deb
+          files: '*.deb'
           
       - name: Update Previous Version
         run: |
