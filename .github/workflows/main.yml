@@ -15,15 +15,12 @@ jobs:
         run: |
           VERSION=$(curl -s https://www.kernel.org/releases.json | jq -r '.latest_stable.version')
           URL=$(curl -s https://www.kernel.org/releases.json | jq --arg VERSION $VERSION -r '.releases[] | select(.version == $VERSION) | .source')
-          previous_kernel=$(cat previous_kernel.txt)
-          if [ "$VERSION" != "$previous_kernel" ]; then
-            echo "::set-output name=version::$VERSION"
-            echo "::set-output name=url::$URL"
+          previous_version=$(cat previous_version.txt)
+          if [ "$VERSION" != "$previous_version" ]; then
             echo "VERSION=$VERSION" >> $GITHUB_ENV
             echo "URL=$URL" >> $GITHUB_ENV
             echo "NEW_KERNEL=true" >> $GITHUB_ENV
           else
-            echo "No new kernel found"
             echo "NEW_KERNEL=false" >> $GITHUB_ENV
           fi
           
