@@ -36,12 +36,13 @@ jobs:
             rm -f $file
             dpkg-deb --root-owner-group -Zgzip -b $folder $file
           done
+          echo "WKDIR=$(pwd)" >> $GITHUB_ENV
           
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: '*.deb'
+          file: ${{ env.WKDIR }}/*.deb
           tag: ${{ env.VERSION }}
           overwrite: true
           file_glob: true
