@@ -29,6 +29,7 @@ jobs:
         run: |
           VERSION=${{ env.VERSION }}
           URL=${{ env.URL }}
+          sudo apt install wget build-essential bison flex libncurses-dev libssl-dev libelf-dev
           wget -q $URL
           tar -xf linux-$VERSION.tar.xz
           cd linux-$VERSION
